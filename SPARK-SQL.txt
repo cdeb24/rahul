@@ -1,0 +1,123 @@
+ drop database IF EXISTS raw_db cascade;
+ drop database IF EXISTS processed_db cascade;
+
+ CREATE DATABASE IF NOT EXISTS raw_db
+ LOCATION 'gs://usecaserahulb24/raw.db';
+
+ use raw_db;
+
+ CREATE OR REPLACE TEMPORARY VIEW customer_lo_v
+ USING jSON
+ OPTIONS(
+ PATH='gs://usecaserahulb24/source/customer_lo.json'
+ );
+
+ CREATE TABLE IF NOT EXISTS raw_db.customer_lo
+ USING PARQUET
+ SELECT * FROM customer_lo_v;
+
+**********************************************************************************
+
+ drop database IF EXISTS raw_db cascade;
+ drop database IF EXISTS processed_db cascade;
+
+
+ CREATE DATABASE IF NOT EXISTS raw_db
+ LOCATION 'gs://usecaserahulb24/raw.db';
+
+ use raw_db;
+
+ CREATE OR REPLACE TEMPORARY VIEW customer_ny_v
+ USING JSON
+ OPTIONS(
+ path='gs://usecaserahulb24/source/customer_ny.json'
+ );
+
+ CREATE TABLE IF NOT EXISTS raw_db.customer_ny
+ USING PARQUET
+ select * from customer_ny_v;
+
+************************************************************************************
+
+drop database IF EXISTS raw_db cascade;
+drop database IF EXIXTS processed_db cascade;
+
+CREATE DATABASE IF NOT EXISTS raw_db
+LOCATION 'gs://usecaserahulb24.raw.db';
+
+use raw_db;
+
+CREATE OR REPLACE TEMPORARY VIEW salesman_lo_v
+USING JSON
+OPTIONS(
+path='gs://usecaserahulb24/source/salesman_lo.json'
+);
+
+CREATE TABLE IF NOT EXISTS raw_db.salesman_lo
+USING PARQUET
+select * from salesman_lo_v;
+
+
+*********************************************************
+
+CREATE DATABASE IF NOT EXISTS raw_db
+LOCATION 'gs://usecaserahulb24/raw.db';
+
+use raw_db;
+
+CREATE OR REPLACE TEMPORARY VIEW salesman_ny_v
+USING JSON
+OPTIONS(
+path='gs://usecaserahulb24/source/salesman_ny.json'
+);
+
+CREATE TABLE IF NOT EXISTS raw_db.salesman_ny
+USING PARQUET
+select * from salesman_ny_v;
+
+**************************************************************
+CREATE DATABASE IF NOT EXISTS raw_db
+LOCATION 'gs://usecaserahulb24/raw.db';
+
+use raw_db;
+
+CREATE OR REPLACE TEMPORARY VIEW orders_v
+USING JSON
+OPTIONS(
+path='gs://usecaserahulb24/source/orders.json'
+);
+
+CREATE TABLE IF NOT EXISTS raw_db.orders
+USING PARQUET
+select * from orders_v;
+
+*************************************************************
+CREATE DATABASE IF NOT EXISTS processed_db
+LOCATION 'gs://usecaserahulb24/processed.db';
+
+use processed_db;
+
+CREATE TABLE IF NOT EXISTS processed_db.result_summary
+(
+name string,
+city string,
+tot_purch_amt decimal(10,2)
+)USING PARQUET;
+
+
+Insert Into processed_db.result_summary
+select sale.name,sale.city,sum(coalesce(purch_amt,0)) as tot_purch_amt from
+(select * from raw_db.customer_lo union select * from raw_db.customer_ny)cust
+left outer join raw_db.orders order on cust.customer_id=order.customer_id
+left outer join (select * from raw_db.salesman_lo union select * from raw_db.salesman_ny)sale
+on sale.salesman_id=order.salesman_id
+group by 1,2
+order by 2,1;
+
+
+
+
+
+
+
+
